@@ -1,0 +1,64 @@
+# ============================================================
+# 🔐 SECRETS & CONFIGURATION SENSIBLE — NE JAMAIS COMMITTER
+# ============================================================
+lib/utils/supabase_config.dart
+.env
+.env.*
+*.secret
+**/google-services.json
+**/GoogleService-Info.plist
+**/firebase_options.dart
+
+# ============================================================
+# Flutter/Dart/Pub
+# ============================================================
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
+
+# ============================================================
+# Miscellaneous
+# ============================================================
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# Fichiers temporaires générés localement
+analysis.txt
+analysis_results.txt
+
+# ============================================================
+# IDEs
+# ============================================================
+*.iml
+*.ipr
+*.iws
+.idea/
+.vscode/
+
+# ============================================================
+# Symbolication / Obfuscation
+# ============================================================
+app.*.symbols
+app.*.map.json
+
+# ============================================================
+# Android Studio build artifacts
+# ============================================================
+/android/app/debug
+/android/app/profile
+/android/app/release

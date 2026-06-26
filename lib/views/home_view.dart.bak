@@ -1,0 +1,1532 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'dart:ui' as ui;
+import '../services/portfolio_service.dart';
+import '../widgets/section_header.dart';
+import '../widgets/service_card.dart';
+import '../widgets/project_card.dart';
+import '../widgets/experience_tile.dart';
+import '../models/education.dart';
+import '../models/iot_design.dart';
+import '../models/skill.dart';
+
+class HomeView extends StatefulWidget {
+  const HomeView({super.key});
+
+  @override
+  State<HomeView> createState() => _HomeViewState();
+}
+
+class _HomeViewState extends State<HomeView> {
+  final GlobalKey _expertisesKey = GlobalKey();
+  final GlobalKey _competencesKey = GlobalKey();
+  final GlobalKey _realisationsKey = GlobalKey();
+  final GlobalKey _carriereKey = GlobalKey();
+  final GlobalKey _formationKey = GlobalKey();
+  final GlobalKey _iotKey = GlobalKey();
+  final GlobalKey _contactKey = GlobalKey();
+
+  void _scrollToSection(GlobalKey key) {
+    if (key.currentContext != null) {
+      Scrollable.ensureVisible(
+        key.currentContext!,
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
+  PopupMenuItem<GlobalKey> _buildPopupMenuItem(String title, IconData icon, GlobalKey key) {
+    return PopupMenuItem<GlobalKey>(
+      value: key,
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            color: const Color(0xFF00E5FF),
+            size: 20,
+          ),
+          const SizedBox(width: 12),
+          Text(
+            title,
+            style: GoogleFonts.orbitron(
+              color: Colors.white,
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDesktop = MediaQuery.of(context).size.width > 800;
+    
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        title: Text('FEDTECH', style: GoogleFonts.orbitron(fontWeight: FontWeight.w900, letterSpacing: 4)),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        flexibleSpace: ClipRect(
+          child: BackdropFilter(
+            filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(color: Colors.white.withAlpha(12)),
+          ),
+        ),
+        actions: [
+          if (isDesktop) ...[
+            _HoverNavButton(title: 'Expertises', onTap: () => _scrollToSection(_expertisesKey)),
+            const SizedBox(width: 8),
+            _HoverNavButton(title: 'Compétences', onTap: () => _scrollToSection(_competencesKey)),
+            const SizedBox(width: 8),
+            _HoverNavButton(title: 'Réalisations', onTap: () => _scrollToSection(_realisationsKey)),
+            const SizedBox(width: 8),
+            _HoverNavButton(title: 'Carrière', onTap: () => _scrollToSection(_carriereKey)),
+            const SizedBox(width: 8),
+            _HoverNavButton(title: 'Formation', onTap: () => _scrollToSection(_formationKey)),
+            const SizedBox(width: 8),
+            _HoverNavButton(title: 'IoT & Conceptions', onTap: () => _scrollToSection(_iotKey)),
+            const SizedBox(width: 8),
+            _HoverNavButton(title: 'Contact', onTap: () => _scrollToSection(_contactKey)),
+            const SizedBox(width: 24),
+          ] else
+            PopupMenuButton<GlobalKey>(
+              icon: const Icon(Icons.menu, color: Colors.white),
+              color: const Color(0xFF0A0E21).withAlpha(242),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(
+                  color: const Color(0xFF00E5FF).withAlpha(76),
+                  width: 1.5,
+                ),
+              ),
+              onSelected: _scrollToSection,
+              itemBuilder: (context) => [
+                _buildPopupMenuItem('Expertises', Icons.bolt_outlined, _expertisesKey),
+                _buildPopupMenuItem('Compétences', Icons.code_outlined, _competencesKey),
+                _buildPopupMenuItem('Réalisations', Icons.rocket_launch_outlined, _realisationsKey),
+                _buildPopupMenuItem('Carrière', Icons.work_history_outlined, _carriereKey),
+                _buildPopupMenuItem('Formation', Icons.school_outlined, _formationKey),
+                _buildPopupMenuItem('IoT & Conceptions', Icons.developer_board_outlined, _iotKey),
+                _buildPopupMenuItem('Contact', Icons.contact_mail_outlined, _contactKey),
+              ],
+            ),
+          Padding(
+            padding: const EdgeInsets.only(right: 16.0),
+            child: Tooltip(
+              message: 'SYSTEM',
+              child: GestureDetector(
+                onLongPress: () => context.go('/admin'),
+                child: IconButton(
+                  icon: const Icon(Icons.terminal_outlined, color: Colors.white24, size: 20),
+                  onPressed: () {
+                    // Quick press does nothing or shows a subtle hint
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Access Restricted: Authorization Required', style: TextStyle(color: Color(0xFF00E5FF), fontSize: 10)),
+                        backgroundColor: Colors.transparent,
+                        duration: Duration(seconds: 1),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+      body: Stack(
+        children: [
+          const BackgroundDecorations(),
+          SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(24, 120, 24, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const HeroSection().animate().fadeIn(duration: 800.ms).slideY(begin: 0.2, end: 0, curve: Curves.easeOutBack),
+                const SizedBox(height: 80),
+
+                Container(key: _expertisesKey, child: const SectionHeader(title: 'Expertises')).animate().fadeIn(delay: 200.ms).slideX(),
+                const SizedBox(height: 32),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    return Consumer<PortfolioService>(
+                      builder: (context, portfolio, _) {
+                        return GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: constraints.maxWidth < 600 ? 1 : (constraints.maxWidth < 1000 ? 2 : 3),
+                            crossAxisSpacing: 20,
+                            mainAxisSpacing: 20,
+                            childAspectRatio: constraints.maxWidth < 600 ? 1.6 : 1.2,
+                          ),
+                          itemCount: portfolio.services.length,
+                          itemBuilder: (context, index) {
+                            return ServiceCard(service: portfolio.services[index])
+                                .animate()
+                                .fadeIn(delay: (400 + (index * 100)).ms)
+                                .scale(delay: (400 + (index * 100)).ms);
+                          },
+                        );
+                      },
+                    );
+                  },
+                ),
+                const SizedBox(height: 80),
+                Container(key: _competencesKey, child: const SectionHeader(title: 'Compétences')).animate().fadeIn(delay: 500.ms).slideX(),
+                const SizedBox(height: 32),
+                Consumer<PortfolioService>(
+                  builder: (context, portfolio, _) {
+                    return Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: portfolio.skills.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final skill = entry.value;
+                        return SkillTag(skill: skill)
+                            .animate()
+                            .fadeIn(delay: (500 + (index * 50)).ms)
+                            .scale(delay: (500 + (index * 50)).ms);
+                      }).toList(),
+                    );
+                  },
+                ),
+                const SizedBox(height: 80),
+
+                Container(key: _realisationsKey, child: const SectionHeader(title: 'Réalisations')).animate().fadeIn(delay: 600.ms).slideX(),
+                const SizedBox(height: 32),
+                ProjectsSection(),
+                const SizedBox(height: 80),
+
+                Container(key: _carriereKey, child: const SectionHeader(title: 'Carrière')).animate().fadeIn(delay: 1000.ms).slideX(),
+                const SizedBox(height: 32),
+                Consumer<PortfolioService>(
+                  builder: (context, portfolio, _) {
+                    return ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: portfolio.experiences.length,
+                      itemBuilder: (context, index) {
+                        return ExperienceTile(experience: portfolio.experiences[index])
+                            .animate()
+                            .fadeIn(delay: (1200 + (index * 200)).ms)
+                            .slideX(begin: -0.05, end: 0);
+                      },
+                    );
+                  },
+                ),
+                const SizedBox(height: 80),
+
+                Container(key: _formationKey, child: const SectionHeader(title: 'Formation')).animate().fadeIn(delay: 1400.ms).slideX(),
+                const SizedBox(height: 32),
+                Consumer<PortfolioService>(
+                  builder: (context, portfolio, _) {
+                    return ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: portfolio.education.length,
+                      itemBuilder: (context, index) {
+                        return EducationTile(education: portfolio.education[index])
+                            .animate()
+                            .fadeIn(delay: (1600 + (index * 200)).ms)
+                            .slideX(begin: 0.05, end: 0);
+                      },
+                    );
+                  },
+                ),
+                const SizedBox(height: 80),
+
+                Container(key: _iotKey, child: const SectionHeader(title: 'IoT & Conceptions')).animate().fadeIn(delay: 1600.ms).slideX(),
+                const SizedBox(height: 32),
+                const IoTDesignsSection(),
+                const SizedBox(height: 80),
+
+                Container(key: _contactKey, child: const SectionHeader(title: 'Coordonnées')).animate().fadeIn(delay: 1800.ms).slideX(),
+                const SizedBox(height: 32),
+                const ContactSection(),
+                const SizedBox(height: 100),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class BackgroundDecorations extends StatelessWidget {
+  const BackgroundDecorations({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        Positioned(
+          top: -100,
+          right: -100,
+          child: Container(
+            width: 300,
+            height: 300,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: const Color(0xFF00E5FF).withAlpha(12),
+            ),
+          ),
+        ).animate(onPlay: (controller) => controller.repeat(reverse: true))
+          .moveY(begin: 0, end: 50, duration: 4.seconds),
+        Positioned(
+          bottom: 100,
+          left: -50,
+          child: Container(
+            width: 200,
+            height: 200,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: const Color(0xFFBD00FF).withAlpha(12),
+            ),
+          ),
+        ).animate(onPlay: (controller) => controller.repeat(reverse: true))
+          .moveX(begin: 0, end: 30, duration: 5.seconds),
+      ],
+    );
+  }
+}
+
+class HeroSection extends StatelessWidget {
+  const HeroSection({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Consumer<PortfolioService>(
+          builder: (context, portfolio, _) {
+            final isMobile = constraints.maxWidth < 600;
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(width: 40, height: 2, color: const Color(0xFF00E5FF)),
+                          const SizedBox(width: 8),
+                          const HeroWelcomeText(),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              portfolio.name,
+                              style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                                fontSize: isMobile ? 42 : 64,
+                                height: 1,
+                              ),
+                            ),
+                          ),
+                          if (isMobile) const SizedBox(width: 16),
+                          if (isMobile) ProfilePicture(size: 80, imageUrl: portfolio.profileImageUrl).animate(onPlay: (c) => c.repeat(reverse: true)).moveY(begin: -5, end: 5, duration: 2.seconds, curve: Curves.easeInOut),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      ShaderMask(
+                        shaderCallback: (bounds) => const LinearGradient(
+                          colors: [Color(0xFF00E5FF), Color(0xFFBD00FF)],
+                        ).createShader(bounds),
+                        child: Text(
+                          portfolio.headline,
+                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            fontSize: isMobile ? 20 : 28,
+                          ),
+                        ),
+                      ).animate().fadeIn(delay: 400.ms).slideX(begin: 0.1, end: 0),
+                      const SizedBox(height: 32),
+                      Text(
+                        portfolio.bio,
+                        style: TextStyle(fontSize: 16, color: Colors.white.withAlpha(153), height: 1.6),
+                      ).animate().fadeIn(delay: 600.ms),
+                    ],
+                  ),
+                ),
+                if (!isMobile) const SizedBox(width: 60),
+                if (!isMobile) ProfilePicture(size: 200, imageUrl: portfolio.profileImageUrl).animate(onPlay: (c) => c.repeat(reverse: true)).moveY(begin: -10, end: 10, duration: 3.seconds, curve: Curves.easeInOut),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class HeroWelcomeText extends StatelessWidget {
+  const HeroWelcomeText({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      'WELCOME TO MY DIGITAL WORLD',
+      style: GoogleFonts.orbitron(
+        color: const Color(0xFF00E5FF),
+        letterSpacing: 2,
+        fontSize: 12,
+        fontWeight: FontWeight.bold,
+      ),
+    );
+  }
+}
+
+class ProfilePicture extends StatelessWidget {
+  final double size;
+  final String imageUrl;
+  const ProfilePicture({super.key, required this.size, required this.imageUrl});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // Background Glow
+          Container(
+            width: size * 0.8,
+            height: size * 0.8,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF00E5FF).withAlpha(50),
+                  blurRadius: 50,
+                  spreadRadius: 10,
+                ),
+                BoxShadow(
+                  color: const Color(0xFFBD00FF).withAlpha(50),
+                  blurRadius: 50,
+                  spreadRadius: 10,
+                ),
+              ],
+            ),
+          ),
+          
+          // Outer HUD Ring 1
+          Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: const Color(0xFF00E5FF).withAlpha(30),
+                width: 1,
+              ),
+            ),
+          ).animate(onPlay: (c) => c.repeat()).rotate(duration: 10.seconds),
+
+          // Outer HUD Ring 2 (Dashed/Arc)
+          SizedBox(
+            width: size * 0.95,
+            height: size * 0.95,
+            child: CustomPaint(
+              painter: CyberRingPainter(color: const Color(0xFF00E5FF), strokeWidth: 2),
+            ),
+          ).animate(onPlay: (c) => c.repeat()).rotate(duration: 15.seconds, begin: 1, end: 0),
+
+          // Profile Image with Border
+          Container(
+            width: size * 0.8,
+            height: size * 0.8,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: const Color(0xFF00E5FF),
+                width: 2,
+              ),
+              image: DecorationImage(
+                image: imageUrl.isEmpty 
+                  ? const NetworkImage('https://placehold.co/150.png') as ImageProvider
+                  : (imageUrl.startsWith('http') 
+                      ? NetworkImage(imageUrl) as ImageProvider
+                      : AssetImage(imageUrl)),
+                fit: BoxFit.cover,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF00E5FF).withAlpha(100),
+                  blurRadius: 10,
+                ),
+              ],
+            ),
+          ),
+          
+          // Scanning Effect Overlay
+          ClipRRect(
+            borderRadius: BorderRadius.circular(size),
+            child: Container(
+              width: size * 0.8,
+              height: size * 0.8,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    const Color(0xFF00E5FF).withAlpha(50),
+                    Colors.transparent,
+                  ],
+                  stops: const [0.4, 0.5, 0.6],
+                ),
+              ),
+            ).animate(onPlay: (c) => c.repeat()).moveY(begin: -size, end: size, duration: 3.seconds),
+          ),
+        ],
+      ),
+    ).animate().fadeIn(duration: 1.seconds).scale(begin: const Offset(0.8, 0.8));
+  }
+}
+
+class CyberRingPainter extends CustomPainter {
+  final Color color;
+  final double strokeWidth;
+  CyberRingPainter({required this.color, required this.strokeWidth});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color.withAlpha(200)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth;
+
+    final rect = Offset.zero & size;
+    
+    // Top-left arc
+    canvas.drawArc(rect, 3.14 + 0.5, 1.0, false, paint);
+    // Bottom-right arc
+    canvas.drawArc(rect, 0.5, 1.0, false, paint);
+    
+    // Add small dots
+    paint.style = PaintingStyle.fill;
+    canvas.drawCircle(Offset(size.width, size.height / 2), 2, paint);
+    canvas.drawCircle(Offset(0, size.height / 2), 2, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+class SkillTag extends StatefulWidget {
+  final Skill skill;
+  const SkillTag({super.key, required this.skill});
+
+  @override
+  State<SkillTag> createState() => _SkillTagState();
+}
+
+class _SkillTagState extends State<SkillTag> {
+  bool _isHovered = false;
+  String? _logoUrl;
+  bool _hasFallbackTriggered = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _logoUrl = widget.skill.resolvedLogoUrl;
+  }
+
+  @override
+  void didUpdateWidget(SkillTag oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.skill.logoUrl != widget.skill.logoUrl || oldWidget.skill.name != widget.skill.name) {
+      setState(() {
+        _logoUrl = widget.skill.resolvedLogoUrl;
+        _hasFallbackTriggered = false;
+      });
+    }
+  }
+
+  /// Builds the appropriate logo widget: SvgPicture for .svg URLs,
+  /// Image.network for raster (PNG/JPG) URLs.
+  Widget _buildLogoWidget() {
+    final url = _logoUrl!;
+    final isSvg = url.toLowerCase().endsWith('.svg');
+
+    if (isSvg) {
+      return SvgPicture.network(
+        url,
+        width: 20,
+        height: 20,
+        fit: BoxFit.contain,
+        placeholderBuilder: (context) => const SizedBox(
+          width: 20,
+          height: 20,
+          child: Center(
+            child: SizedBox(
+              width: 12,
+              height: 12,
+              child: CircularProgressIndicator(
+                strokeWidth: 1.5,
+                color: Color(0xFF00E5FF),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Image.network(
+      url,
+      width: 20,
+      height: 20,
+      fit: BoxFit.contain,
+      errorBuilder: (context, error, stackTrace) {
+        if (!_hasFallbackTriggered) {
+          final fallback = Skill.getAutomaticLogo(widget.skill.name);
+          if (fallback != null && fallback != _logoUrl) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                setState(() {
+                  _logoUrl = fallback;
+                  _hasFallbackTriggered = true;
+                });
+              }
+            });
+          }
+        }
+        return const Icon(
+          Icons.code,
+          color: Color(0xFF00E5FF),
+          size: 16,
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: AnimatedScale(
+        scale: _isHovered ? 1.15 : 1.0,
+        duration: const Duration(milliseconds: 200),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: _isHovered ? const Color(0xFF00E5FF).withAlpha(38) : const Color(0xFF00E5FF).withAlpha(12),
+            borderRadius: BorderRadius.circular(15),
+            border: Border.all(
+              color: _isHovered ? const Color(0xFF00E5FF) : const Color(0xFF00E5FF).withAlpha(51),
+              width: _isHovered ? 2 : 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF00E5FF).withAlpha(_isHovered ? 30 : 5),
+                blurRadius: _isHovered ? 15 : 10,
+                spreadRadius: _isHovered ? 2 : 0,
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_logoUrl != null) ...[
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: _buildLogoWidget(),
+                ),
+                const SizedBox(width: 8),
+              ] else ...[
+                const Icon(
+                  Icons.bolt_outlined,
+                  color: Color(0xFF00E5FF),
+                  size: 16,
+                ),
+                const SizedBox(width: 8),
+              ],
+              Text(
+                widget.skill.name,
+                style: GoogleFonts.orbitron(
+                  color: _isHovered ? Colors.white : const Color(0xFF00E5FF),
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ).animate(target: _isHovered ? 1 : 0).shimmer(color: Colors.white24);
+  }
+}
+
+class EducationTile extends StatefulWidget {
+  final Education education;
+  const EducationTile({super.key, required this.education});
+
+  @override
+  State<EducationTile> createState() => _EducationTileState();
+}
+
+class _EducationTileState extends State<EducationTile> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: AnimatedScale(
+        scale: _isHovered ? 1.02 : 1.0,
+        duration: const Duration(milliseconds: 200),
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 24.0),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: _isHovered ? Colors.white.withAlpha(12) : Colors.white.withAlpha(8),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: _isHovered ? const Color(0xFFBD00FF).withAlpha(100) : Colors.white.withAlpha(25),
+              ),
+              boxShadow: [
+                if (_isHovered)
+                  BoxShadow(
+                    color: const Color(0xFFBD00FF).withAlpha(20),
+                    blurRadius: 20,
+                  ),
+              ],
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: (_isHovered ? const Color(0xFF00E5FF) : const Color(0xFFBD00FF)).withAlpha(25),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: (_isHovered ? const Color(0xFF00E5FF) : const Color(0xFFBD00FF)).withAlpha(51),
+                    ),
+                  ),
+                  child: Icon(
+                    Icons.school,
+                    color: _isHovered ? const Color(0xFF00E5FF) : const Color(0xFFBD00FF),
+                    size: 20,
+                  ),
+                ).animate(target: _isHovered ? 1 : 0).shimmer(color: Colors.white24),
+                const SizedBox(width: 20),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.education.degree,
+                        style: GoogleFonts.orbitron(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: _isHovered ? const Color(0xFFBD00FF) : Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        widget.education.school,
+                        style: TextStyle(
+                          color: _isHovered ? const Color(0xFF00E5FF) : const Color(0xFFBD00FF),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        widget.education.period,
+                        style: const TextStyle(color: Colors.white38, fontSize: 12),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        widget.education.description,
+                        style: const TextStyle(color: Colors.white60, fontSize: 14, height: 1.4),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class ContactSection extends StatefulWidget {
+  const ContactSection({super.key});
+
+  @override
+  State<ContactSection> createState() => _ContactSectionState();
+}
+
+class _ContactSectionState extends State<ContactSection> {
+  final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _messageController = TextEditingController();
+  bool _isSending = false;
+
+  Future<void> _sendMessage(PortfolioService portfolio) async {
+    if (_nameController.text.isEmpty || _emailController.text.isEmpty || _messageController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Veuillez remplir tous les champs.'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    setState(() => _isSending = true);
+
+    final success = await portfolio.sendMessage(
+      _nameController.text.trim(),
+      _emailController.text.trim(),
+      _messageController.text.trim(),
+    );
+
+    if (mounted) {
+      setState(() => _isSending = false);
+      if (success) {
+        _nameController.clear();
+        _emailController.clear();
+        _messageController.clear();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Container(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF00E5FF).withAlpha(30),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.check_circle_rounded, color: Color(0xFF00E5FF), size: 20),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'TRANSMISSION RÉUSSIE',
+                          style: GoogleFonts.orbitron(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w900,
+                            color: const Color(0xFF00E5FF),
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        const Text(
+                          'Votre message a été envoyé avec succès.',
+                          style: TextStyle(color: Colors.white, fontSize: 11),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            backgroundColor: const Color(0xFF0A0E21).withAlpha(230),
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(20),
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(15),
+              side: const BorderSide(color: Color(0xFF00E5FF), width: 1.5),
+            ),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Erreur lors de l\'envoi. Réessayez.'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<PortfolioService>(
+      builder: (context, portfolio, _) {
+        final contact = portfolio.contact;
+        final email = contact['email'] ?? '';
+        final phone = contact['phone'] ?? '';
+        final linkedin = contact['linkedin'] ?? '';
+        final github = contact['github'] ?? '';
+
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final isWide = constraints.maxWidth > 800;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Contact links bar
+                if (email.isNotEmpty || phone.isNotEmpty || linkedin.isNotEmpty || github.isNotEmpty)
+                  Wrap(
+                    spacing: 16,
+                    runSpacing: 12,
+                    children: [
+                      if (email.isNotEmpty) _ContactChip(icon: Icons.email_outlined, label: email, url: 'mailto:$email', color: const Color(0xFF00E5FF)),
+                      if (phone.isNotEmpty) _ContactChip(icon: Icons.phone_outlined, label: phone, url: 'tel:$phone', color: const Color(0xFFBD00FF)),
+                      if (linkedin.isNotEmpty) _ContactChip(icon: Icons.link, label: 'LinkedIn', url: linkedin, color: const Color(0xFF00E5FF)),
+                      if (github.isNotEmpty) _ContactChip(icon: Icons.code, label: 'GitHub', url: github, color: const Color(0xFFBD00FF)),
+                    ],
+                  ),
+                const SizedBox(height: 32),
+
+                // Form card with glassmorphism
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
+                  child: BackdropFilter(
+                    filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                    child: Container(
+                      padding: const EdgeInsets.all(32),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withAlpha(8),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(color: const Color(0xFF00E5FF).withAlpha(60), width: 1),
+                        boxShadow: [
+                          BoxShadow(color: const Color(0xFF00E5FF).withAlpha(10), blurRadius: 30, spreadRadius: 5),
+                        ],
+                      ),
+                      child: isWide
+                          ? Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(flex: 2, child: _buildForm(portfolio)),
+                                const SizedBox(width: 48),
+                                Expanded(child: _buildSideInfo()),
+                              ],
+                            )
+                          : Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildForm(portfolio),
+                                const SizedBox(height: 32),
+                                _buildSideInfo(),
+                              ],
+                            ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildForm(PortfolioService portfolio) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ShaderMask(
+          shaderCallback: (bounds) => const LinearGradient(
+            colors: [Color(0xFF00E5FF), Color(0xFFBD00FF)],
+          ).createShader(bounds),
+          child: Text('Envoyer un Message', style: GoogleFonts.orbitron(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+        ),
+        const SizedBox(height: 8),
+        Text('Je vous répondrai dans les plus brefs délais', style: TextStyle(color: Colors.white.withAlpha(153), fontSize: 14)),
+        const SizedBox(height: 28),
+        _buildGlassInput(_nameController, 'Nom Complet', Icons.person_outline),
+        const SizedBox(height: 16),
+        _buildGlassInput(_emailController, 'Email', Icons.email_outlined),
+        const SizedBox(height: 16),
+        _buildGlassInput(_messageController, 'Message', Icons.message_outlined, maxLines: 5),
+        const SizedBox(height: 24),
+        SizedBox(
+          width: double.infinity,
+          height: 54,
+          child: ElevatedButton.icon(
+            onPressed: _isSending ? null : () => _sendMessage(portfolio),
+            icon: _isSending
+                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2))
+                : const Icon(Icons.send_rounded, color: Colors.black, size: 20),
+            label: Text(
+              _isSending ? 'ENVOI...' : 'ENVOYER LE MESSAGE',
+              style: GoogleFonts.orbitron(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 13),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF00E5FF),
+              disabledBackgroundColor: const Color(0xFF00E5FF).withAlpha(100),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              elevation: 8,
+              shadowColor: const Color(0xFF00E5FF).withAlpha(80),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSideInfo() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Disponibilité', style: GoogleFonts.orbitron(color: const Color(0xFF00E5FF), fontSize: 14, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 16),
+        _buildInfoRow(Icons.circle, 'Disponible pour des projets', const Color(0xFF00FF88)),
+        const SizedBox(height: 10),
+        _buildInfoRow(Icons.schedule_outlined, 'Réponse sous 24h', Colors.white60),
+        const SizedBox(height: 10),
+        _buildInfoRow(Icons.language_outlined, 'Français / Anglais', Colors.white60),
+        const SizedBox(height: 32),
+        Text('Basé à', style: GoogleFonts.orbitron(color: const Color(0xFFBD00FF), fontSize: 14, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 16),
+        _buildInfoRow(Icons.location_on_outlined, 'Tunisie', Colors.white60),
+      ],
+    );
+  }
+
+  Widget _buildInfoRow(IconData icon, String text, Color color) {
+    return Row(
+      children: [
+        Icon(icon, color: color, size: 16),
+        const SizedBox(width: 10),
+        Flexible(child: Text(text, style: TextStyle(color: Colors.white70, fontSize: 14))),
+      ],
+    );
+  }
+
+  Widget _buildGlassInput(TextEditingController controller, String label, IconData icon, {int maxLines = 1}) {
+    return TextField(
+      controller: controller,
+      maxLines: maxLines,
+      style: const TextStyle(color: Colors.white, fontSize: 14),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(color: Colors.white.withAlpha(127), fontSize: 13),
+        prefixIcon: Icon(icon, color: const Color(0xFF00E5FF).withAlpha(153), size: 20),
+        filled: true,
+        fillColor: Colors.white.withAlpha(8),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.white.withAlpha(30)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFF00E5FF), width: 1.5),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      ),
+    );
+  }
+}
+
+class _ContactChip extends StatefulWidget {
+  final IconData icon;
+  final String label;
+  final String url;
+  final Color color;
+  const _ContactChip({required this.icon, required this.label, required this.url, required this.color});
+
+  @override
+  State<_ContactChip> createState() => _ContactChipState();
+}
+
+class _ContactChipState extends State<_ContactChip> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: GestureDetector(
+        onTap: () async {
+          final uri = Uri.parse(widget.url);
+          if (await canLaunchUrl(uri)) {
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
+          }
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: _isHovered ? widget.color.withAlpha(30) : widget.color.withAlpha(12),
+            borderRadius: BorderRadius.circular(30),
+            border: Border.all(color: _isHovered ? widget.color : widget.color.withAlpha(60)),
+            boxShadow: _isHovered ? [BoxShadow(color: widget.color.withAlpha(50), blurRadius: 10)] : [],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(widget.icon, color: widget.color, size: 16),
+              const SizedBox(width: 8),
+              Text(widget.label, style: TextStyle(color: _isHovered ? widget.color : Colors.white70, fontSize: 13, fontWeight: FontWeight.w500)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class IoTDesignsSection extends StatelessWidget {
+  const IoTDesignsSection({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<PortfolioService>(
+      builder: (context, portfolio, _) {
+        if (portfolio.iotDesigns.isEmpty) {
+          return const Center(
+            child: Text('Aucune conception disponible pour le moment.', style: TextStyle(color: Colors.white24)),
+          );
+        }
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final crossAxisCount = constraints.maxWidth < 600 ? 1 : (constraints.maxWidth < 1000 ? 2 : 3);
+            return GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: crossAxisCount,
+                crossAxisSpacing: 20,
+                mainAxisSpacing: 20,
+                childAspectRatio: 0.85,
+              ),
+              itemCount: portfolio.iotDesigns.length,
+              itemBuilder: (context, index) {
+                return IoTDesignCard(design: portfolio.iotDesigns[index])
+                    .animate()
+                    .fadeIn(delay: (200 * index).ms)
+                    .scale(delay: (200 * index).ms);
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class IoTDesignCard extends StatefulWidget {
+  final IoTDesign design;
+  const IoTDesignCard({super.key, required this.design});
+
+  @override
+  State<IoTDesignCard> createState() => _IoTDesignCardState();
+}
+
+class _IoTDesignCardState extends State<IoTDesignCard> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: AnimatedScale(
+        scale: _isHovered ? 1.03 : 1.0,
+        duration: const Duration(milliseconds: 300),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white.withAlpha(8),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: _isHovered ? const Color(0xFF00E5FF).withAlpha(150) : Colors.white.withAlpha(25),
+              width: _isHovered ? 2 : 1,
+            ),
+            boxShadow: [
+              if (_isHovered)
+                BoxShadow(
+                  color: const Color(0xFF00E5FF).withAlpha(20),
+                  blurRadius: 20,
+                  spreadRadius: 5,
+                ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Image Header
+              Expanded(
+                flex: 5,
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Image.network(
+                        widget.design.thumbnailUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          color: Colors.white.withAlpha(12),
+                          child: const Icon(Icons.memory, color: Color(0xFF00E5FF), size: 40),
+                        ),
+                      ),
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.transparent,
+                              Colors.black.withAlpha(150),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        top: 12,
+                        right: 12,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFBD00FF).withAlpha(200),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            'IoT PROJECT',
+                            style: GoogleFonts.orbitron(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.white),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              
+              // Content
+              Expanded(
+                flex: 4,
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.design.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.orbitron(
+                          color: _isHovered ? const Color(0xFF00E5FF) : Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Expanded(
+                        child: Text(
+                          widget.design.description,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: Colors.white.withAlpha(153), fontSize: 11, height: 1.4),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _DownloadButton(
+                              icon: Icons.architecture,
+                              label: 'PROTEUS',
+                              url: widget.design.proteusUrl,
+                              color: const Color(0xFF00E5FF),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _DownloadButton(
+                              icon: Icons.code,
+                              label: 'CODE',
+                              url: widget.design.codeUrl,
+                              color: const Color(0xFFBD00FF),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DownloadButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String url;
+  final Color color;
+
+  const _DownloadButton({
+    required this.icon,
+    required this.label,
+    required this.url,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: url.isEmpty ? null : () async {
+        final uri = Uri.parse(url);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        }
+      },
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          color: url.isEmpty ? Colors.white10 : color.withAlpha(25),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: url.isEmpty ? Colors.white10 : color.withAlpha(100)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: url.isEmpty ? Colors.white24 : color, size: 14),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: GoogleFonts.orbitron(
+                color: url.isEmpty ? Colors.white24 : Colors.white,
+                fontSize: 9,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class ProjectsSection extends StatefulWidget {
+  const ProjectsSection({super.key});
+
+  @override
+  State<ProjectsSection> createState() => _ProjectsSectionState();
+}
+
+class _ProjectsSectionState extends State<ProjectsSection> {
+  String _selectedCategory = 'All';
+  final List<String> _categories = [
+    'All',
+    'IoT',
+    'Embarqué',
+    'Infrastructure Réseaux',
+    'Dev Mobile',
+    'Dev Web',
+    'Dev Logiciel'
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<PortfolioService>(
+      builder: (context, portfolio, _) {
+        final filteredProjects = _selectedCategory == 'All'
+            ? portfolio.projects
+            : portfolio.projects.where((p) => p.category == _selectedCategory).toList();
+
+        return Column(
+          children: [
+            // Filter Chips
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              child: Row(
+                children: _categories.map((category) {
+                  final isSelected = _selectedCategory == category;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 12),
+                    child: MouseRegion(
+                      cursor: SystemMouseCursors.click,
+                      child: GestureDetector(
+                        onTap: () => setState(() => _selectedCategory = category),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: isSelected 
+                              ? const Color(0xFF00E5FF).withAlpha(38) 
+                              : Colors.white.withAlpha(12),
+                            borderRadius: BorderRadius.circular(15),
+                            border: Border.all(
+                              color: isSelected 
+                                ? const Color(0xFF00E5FF) 
+                                : Colors.white.withAlpha(25),
+                              width: isSelected ? 1.5 : 1,
+                            ),
+                            boxShadow: [
+                              if (isSelected)
+                                BoxShadow(
+                                  color: const Color(0xFF00E5FF).withAlpha(30),
+                                  blurRadius: 10,
+                                  spreadRadius: 1,
+                                ),
+                            ],
+                          ),
+                          child: Text(
+                            category.toUpperCase(),
+                            style: GoogleFonts.orbitron(
+                              color: isSelected ? const Color(0xFF00E5FF) : Colors.white60,
+                              fontSize: 10,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                              letterSpacing: 1,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.1, end: 0);
+                }).toList(),
+              ),
+            ),
+            const SizedBox(height: 40),
+            
+            // Projects Grid
+            if (filteredProjects.isEmpty)
+              Container(
+                height: 300,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Colors.white.withAlpha(5),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: Colors.white.withAlpha(10)),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.folder_open_outlined, color: Colors.white24, size: 48),
+                    const SizedBox(height: 16),
+                    Text(
+                      'AUCUN PROJET DANS CETTE CATÉGORIE',
+                      style: GoogleFonts.orbitron(color: Colors.white24, fontSize: 12, letterSpacing: 1),
+                    ),
+                  ],
+                ),
+              ).animate().fadeIn()
+            else
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final crossAxisCount = constraints.maxWidth < 600 ? 1 : (constraints.maxWidth < 1000 ? 2 : 3);
+                  return GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: crossAxisCount,
+                      crossAxisSpacing: 24,
+                      mainAxisSpacing: 24,
+                      childAspectRatio: 0.9,
+                    ),
+                    itemCount: filteredProjects.length,
+                    itemBuilder: (context, index) {
+                      return ProjectCard(project: filteredProjects[index])
+                          .animate()
+                          .fadeIn(delay: (100 * index).ms)
+                          .scale(delay: (100 * index).ms, begin: const Offset(0.95, 0.95));
+                    },
+                  );
+                },
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _HoverNavButton extends StatefulWidget {
+  final String title;
+  final VoidCallback onTap;
+
+  const _HoverNavButton({
+    required this.title,
+    required this.onTap,
+  });
+
+  @override
+  State<_HoverNavButton> createState() => _HoverNavButtonState();
+}
+
+class _HoverNavButtonState extends State<_HoverNavButton> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 12.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AnimatedDefaultTextStyle(
+                duration: const Duration(milliseconds: 200),
+                style: GoogleFonts.orbitron(
+                  color: _isHovered ? const Color(0xFF00E5FF) : Colors.white70,
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1,
+                  shadows: _isHovered
+                      ? [
+                          Shadow(
+                            color: const Color(0xFF00E5FF).withAlpha(204),
+                            blurRadius: 10,
+                          ),
+                        ]
+                      : [],
+                ),
+                child: Text(widget.title),
+              ),
+              const SizedBox(height: 4),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                width: _isHovered ? 40 : 0,
+                height: 2,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF00E5FF),
+                  borderRadius: BorderRadius.circular(2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF00E5FF).withAlpha(204),
+                      blurRadius: 6,
+                      spreadRadius: 1,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

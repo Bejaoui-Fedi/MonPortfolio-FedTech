@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <!--
+    If you are serving your web app in a path other than the root, change the
+    href value below to reflect the base path you are serving from.
+
+    The path provided below has to start and end with a slash "/" in order for
+    it to work correctly.
+
+    For more details:
+    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
+
+    This is a placeholder for base href that will be replaced by the value of
+    the `--base-href` argument provided to `flutter build`.
+  -->
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="A new Flutter project.">
+
+  <!-- iOS meta tags & icons -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="fedtech">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>fedtech</title>
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+  <script>
+    async function loadModels() {
+      const MODEL_URL = 'assets/models';
+      try {
+        await Promise.all([
+          faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
+          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+          faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+        ]);
+        console.log("Face Models Loaded Successfully");
+      } catch (e) {
+        console.error("Error loading models:", e);
+      }
+    }
+
+    async function getFaceDescriptor(imageUrl) {
+      try {
+        if (!faceapi.nets.ssdMobilenetv1.params) {
+          await loadModels();
+        }
+        const img = await faceapi.fetchImage(imageUrl);
+        const fullFaceDescription = await faceapi.detectSingleFace(img)
+          .withFaceLandmarks()
+          .withFaceDescriptor();
+        
+        if (!fullFaceDescription) {
+          console.warn("No face detected in image");
+          return null;
+        }
+        
+        // Return descriptor as a plain array of floats
+        return Array.from(fullFaceDescription.descriptor);
+      } catch (e) {
+        console.error("Face Descriptor Error:", e);
+        return null;
+      }
+    }
+
+    async function verifyFace(capturedImageUrl, referenceImageUrl) {
+      try {
+        const capDesc = await getFaceDescriptor(capturedImageUrl);
+        const refDesc = await getFaceDescriptor(referenceImageUrl);
+
+        if (!capDesc || !refDesc) return false;
+
+        const distance = faceapi.euclideanDistance(capDesc, refDesc);
+        console.log("Face distance:", distance);
+        return distance < 0.6; // Matching PHP threshold
+      } catch (e) {
+        console.error("Face Verification Error:", e);
+        return false;
+      }
+    }
+
+    async function captureFaceFromCamera() {
+      return new Promise(async (resolve, reject) => {
+        let stream;
+        let timeoutId;
+        let scanActive = true;
+
+        const cleanup = () => {
+          scanActive = false;
+          if (timeoutId) clearTimeout(timeoutId);
+          if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+          }
+          const overlay = document.getElementById('face-scan-overlay');
+          if (overlay) {
+            document.body.removeChild(overlay);
+          }
+        };
+
+        try {
+          if (!faceapi.nets.ssdMobilenetv1.params) {
+            await loadModels();
+          }
+
+          // Create overlay UI
+          const overlay = document.createElement('div');
+          overlay.id = 'face-scan-overlay';
+          overlay.style.position = 'fixed';
+          overlay.style.top = '0';
+          overlay.style.left = '0';
+          overlay.style.width = '100vw';
+          overlay.style.height = '100vh';
+          overlay.style.backgroundColor = 'rgba(10, 14, 33, 0.95)';
+          overlay.style.zIndex = '9999';
+          overlay.style.display = 'flex';
+          overlay.style.flexDirection = 'column';
+          overlay.style.alignItems = 'center';
+          overlay.style.justifyContent = 'center';
+          overlay.style.fontFamily = "'Orbitron', sans-serif";
+
+          const video = document.createElement('video');
+          video.style.maxWidth = '80%';
+          video.style.maxHeight = '60%';
+          video.style.transform = 'scaleX(-1)';
+          video.style.borderRadius = '20px';
+          video.style.border = '2px solid #00E5FF';
+          video.style.boxShadow = '0 0 30px rgba(0, 229, 255, 0.3)';
+          video.setAttribute('autoplay', '');
+          video.setAttribute('muted', '');
+          video.setAttribute('playsinline', '');
+
+          const canvas = document.createElement('canvas');
+          canvas.style.position = 'absolute';
+          canvas.style.transform = 'scaleX(-1)';
+          
+          const statusText = document.createElement('h2');
+          statusText.style.color = '#00E5FF';
+          statusText.innerText = 'INITIALIZING BIOMETRIC SCAN...';
+          statusText.style.marginBottom = '20px';
+          statusText.style.fontSize = '18px';
+          statusText.style.letterSpacing = '2px';
+
+          const cancelButton = document.createElement('button');
+          cancelButton.innerText = 'TERMINATE SCAN';
+          cancelButton.style.marginTop = '30px';
+          cancelButton.style.padding = '12px 24px';
+          cancelButton.style.backgroundColor = 'transparent';
+          cancelButton.style.color = '#BD00FF';
+          cancelButton.style.border = '1px solid #BD00FF';
+          cancelButton.style.borderRadius = '10px';
+          cancelButton.style.cursor = 'pointer';
+          cancelButton.style.fontWeight = 'bold';
+          cancelButton.style.letterSpacing = '1px';
+
+          overlay.appendChild(statusText);
+          overlay.appendChild(video);
+          overlay.appendChild(canvas);
+          overlay.appendChild(cancelButton);
+          document.body.appendChild(overlay);
+
+          // Timeout after 30 seconds
+          timeoutId = setTimeout(() => {
+            console.warn("Face detection timeout");
+            cleanup();
+            resolve(null);
+          }, 30000);
+
+          cancelButton.onclick = () => {
+            cleanup();
+            resolve(null);
+          };
+
+          // Start camera
+          stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { 
+              facingMode: 'user',
+              width: { ideal: 640 },
+              height: { ideal: 480 }
+            } 
+          });
+          video.srcObject = stream;
+
+          video.addEventListener('play', () => {
+            const displaySize = { width: video.videoWidth, height: video.videoHeight };
+            faceapi.matchDimensions(canvas, displaySize);
+            
+            statusText.innerText = 'POSITION FACE WITHIN FRAME...';
+
+            async function onPlay() {
+              if (!scanActive) return;
+
+              try {
+                const detections = await faceapi.detectSingleFace(video)
+                  .withFaceLandmarks()
+                  .withFaceDescriptor();
+
+                if (detections) {
+                  const resizedDetections = faceapi.resizeResults(detections, displaySize);
+                  const ctx = canvas.getContext('2d');
+                  ctx.clearRect(0, 0, canvas.width, canvas.height);
+                  
+                  // Draw with custom colors
+                  faceapi.draw.drawDetections(canvas, resizedDetections);
+                  faceapi.draw.drawFaceLandmarks(canvas, resizedDetections);
+                  
+                  statusText.innerText = 'FACE RECOGNIZED! AUTHORIZING...';
+                  statusText.style.color = '#BD00FF';
+
+                  setTimeout(() => {
+                    cleanup();
+                    resolve(Array.from(detections.descriptor));
+                  }, 800);
+                  return; // Stop scanning
+                }
+              } catch (err) {
+                console.error("Detection error:", err);
+              }
+
+              // Continue scanning
+              setTimeout(onPlay, 100);
+            }
+
+            onPlay();
+          });
+
+        } catch (e) {
+          console.error("Biometric Hardware Error:", e);
+          cleanup();
+          resolve(null);
+        }
+      });
+    }
+
+    window.captureFaceFromCamera = captureFaceFromCamera;
+    window.verifyFace = verifyFace;
+    window.getFaceDescriptor = getFaceDescriptor;
+  </script>
+  <script src="flutter_bootstrap.js" async></script>
+
+</body>
+</html>
